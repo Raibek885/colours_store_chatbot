@@ -28,6 +28,22 @@ STATIC_POLICY_KEYWORDS = (
     "правил",
     "можно ли вернуть",
     "как вернуть",
+    "вскрыл",
+    "вскрыт",
+    "открыл",
+    "открыт",
+    "не пригод",
+    "непригод",
+    "качество",
+    "не понравилось",
+    "не устроило",
+    "брак",
+    "бракован",
+    "дефект",
+    "поврежд",
+    "претенз",
+    "жалоб",
+    "акт о браке",
 )
 
 
@@ -97,8 +113,17 @@ class ColourStoreBrain:
             answer = self._answer_with_dynamic_data(message, tool_result, history=history)
             return {"route": route, "answer": answer, "tool_result": tool_result}
 
-        documents = retrieve_static_context(message)
-        context = format_static_context(documents)
+        try:
+            documents = retrieve_static_context(message)
+            context = format_static_context(documents)
+        except Exception as exc:
+            answer = (
+                "Похоже, база справочной информации сейчас недоступна. "
+                f"Техническая ошибка: {type(exc).__name__}. "
+                "Лучше уточнить этот вопрос у менеджера или повторить чуть позже."
+            )
+            return {"route": route, "answer": answer, "sources": []}
+
         answer = self._answer_with_static_context(message, context, history=history)
         return {
             "route": route,
