@@ -1,0 +1,23 @@
+services:
+  qdrant:
+    image: qdrant/qdrant:v1.15.4
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+    volumes:
+      - ./qdrant_data:/qdrant/storage
+
+  bot:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6333
+      CATALOG_DB_PATH: /app/data/catalog.sqlite3
+      SESSIONS_DIR: /app/data/sessions
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - qdrant

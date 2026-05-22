@@ -1,0 +1,11 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+tbot/
+qdrant_data/
+data/catalog.sqlite3
+data/catalog.sqlite3-*
+data/sessions/
+data/test_sessions*/
