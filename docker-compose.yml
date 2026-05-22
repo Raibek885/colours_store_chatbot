@@ -1,6 +1,6 @@
 services:
   qdrant:
-    image: qdrant/qdrant:v1.15.4
+    image: qdrant/qdrant:v1.18.0
     restart: unless-stopped
     ports:
       - "6333:6333"

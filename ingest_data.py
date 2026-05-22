@@ -152,7 +152,17 @@ def print_dry_run(records):
 
 
 def upsert_records(records, batch_size):
-    from vector_db import client_qrant, get_embedding
+    from vector_db import client_qrant, get_embedding, size
+    from qdrant_client.models import Distance, VectorParams
+
+    collections = client_qrant.get_collections().collections
+    collection_names = {collection.name for collection in collections}
+    if QDRANT_COLLECTION not in collection_names:
+        client_qrant.create_collection(
+            collection_name=QDRANT_COLLECTION,
+            vectors_config=VectorParams(size=size, distance=Distance.COSINE),
+        )
+        print(f"created collection: {QDRANT_COLLECTION}")
 
     for start in range(0, len(records), batch_size):
         batch = records[start : start + batch_size]
