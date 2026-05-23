@@ -74,6 +74,36 @@ DYNAMIC_KEYWORDS = (
     "kzt",
 )
 
+CITY_ALIASES = {
+    "алматы": ("алматы", "алмат", "almaty"),
+    "астана": ("астана", "астан", "astana"),
+}
+
+LOCATION_QUERY_KEYWORDS = (
+    "адрес",
+    "где",
+    "наход",
+    "магазин",
+    "офис",
+    "филиал",
+    "бутик",
+    "контакт",
+    "телефон",
+    "режим",
+    "работа",
+)
+
+ALL_CITY_QUERY_KEYWORDS = (
+    "все",
+    "всех",
+    "другие",
+    "других",
+    "филиалы",
+    "магазины",
+    "города",
+    "городах",
+)
+
 
 SYSTEM_PROMPT = """
 Ты внимательный консультант интернет-магазина Центр Красок #1.
@@ -88,6 +118,60 @@ SYSTEM_PROMPT = """
 Не начинай ответ с жирного заголовка. Не пиши длинные дисклеймеры.
 Не используй эмодзи.
 """.strip()
+
+
+def normalize_city(value: str | None) -> str:
+    text = (value or "").strip().lower()
+    for canonical, aliases in CITY_ALIASES.items():
+        if any(alias in text for alias in aliases):
+            return canonical
+    return text
+
+
+def query_mentions_city(query: str) -> bool:
+    lower = query.lower()
+    return any(alias in lower for aliases in CITY_ALIASES.values() for alias in aliases)
+
+
+def query_asks_all_locations(query: str) -> bool:
+    lower = query.lower()
+    return any(keyword in lower for keyword in ALL_CITY_QUERY_KEYWORDS)
+
+
+def is_location_query(query: str) -> bool:
+    lower = query.lower()
+    return any(keyword in lower for keyword in LOCATION_QUERY_KEYWORDS)
+
+
+def document_city(payload: dict[str, Any]) -> str:
+    city = payload.get("city")
+    return normalize_city(str(city)) if city else ""
+
+
+def prioritize_static_documents(documents: list[Any], city: str, query: str) -> list[Any]:
+    user_city = normalize_city(city)
+    if not documents or not user_city or not is_location_query(query):
+        return documents
+
+    if query_mentions_city(query) or query_asks_all_locations(query):
+        return documents
+
+    preferred = []
+    neutral = []
+    other_city = []
+    for document in documents:
+        payload = getattr(document, "payload", {}) or {}
+        doc_city = document_city(payload)
+        if not doc_city:
+            neutral.append(document)
+        elif doc_city == user_city:
+            preferred.append(document)
+        else:
+            other_city.append(document)
+
+    if preferred:
+        return (preferred + neutral)[:5]
+    return (neutral + other_city)[:5]
 
 
 class ColourStoreBrain:
@@ -114,7 +198,8 @@ class ColourStoreBrain:
             return {"route": route, "answer": answer, "tool_result": tool_result}
 
         try:
-            documents = retrieve_static_context(message)
+            documents = retrieve_static_context(message, limit=8)
+            documents = prioritize_static_documents(documents, city, message)
             context = format_static_context(documents)
         except Exception as exc:
             answer = (
@@ -124,7 +209,7 @@ class ColourStoreBrain:
             )
             return {"route": route, "answer": answer, "sources": []}
 
-        answer = self._answer_with_static_context(message, context, history=history)
+        answer = self._answer_with_static_context(message, context, city=city, history=history)
         return {
             "route": route,
             "answer": answer,
@@ -146,6 +231,7 @@ class ColourStoreBrain:
         message: str,
         context: str,
         *,
+        city: str = "Алматы",
         history: list[dict[str, str]] | None = None,
     ) -> str:
         if not self.llm.is_configured:
@@ -159,6 +245,10 @@ class ColourStoreBrain:
                 "content": (
                     "Ответь клиенту по static RAG context. "
                     "Если это вопрос про адрес, доставку, режим работы или условия, дай прямой ответ. "
+                    f"Город клиента из постоянного контекста: {city}. "
+                    "Если клиент спрашивает адрес, офис, магазин, бутик, режим работы или телефон, сначала отвечай только по городу клиента. "
+                    "Не перечисляй другие города и филиалы, если клиент прямо не спросил про все города, другие филиалы или не назвал другой город. "
+                    "Если клиент пишет 'офис', не придумывай отдельные офисы: используй адрес магазина или юридический адрес из контекста и формулируй аккуратно. "
                     "Сохраняй живой Telegram-тон: не слишком официально, без сухих заголовков.\n\n"
                     f"STATIC RAG CONTEXT:\n{context}\n\n"
                     f"ВОПРОС КЛИЕНТА:\n{message}"
