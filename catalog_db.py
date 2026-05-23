@@ -304,7 +304,7 @@ def search_products(filters: ProductFilters, db_path: Path = CATALOG_DB_PATH) ->
     with connect(db_path) as conn:
         rows = conn.execute(sql, params).fetchall()
 
-    return [_row_to_product(row) for row in rows]
+    return attach_stock_by_city([_row_to_product(row) for row in rows], db_path=db_path)
 
 
 def list_product_candidates(
@@ -378,7 +378,7 @@ def _search_products_uncapped(
     with connect(db_path) as conn:
         rows = conn.execute(sql, params).fetchall()
 
-    return [_row_to_product(row) for row in rows]
+    return attach_stock_by_city([_row_to_product(row) for row in rows], db_path=db_path)
 
 
 def _row_to_product(row: sqlite3.Row) -> dict[str, Any]:
@@ -388,6 +388,54 @@ def _row_to_product(row: sqlite3.Row) -> dict[str, Any]:
     except json.JSONDecodeError:
         item["attributes"] = {}
     return item
+
+
+def attach_stock_by_city(products: list[dict[str, Any]], db_path: Path = CATALOG_DB_PATH) -> list[dict[str, Any]]:
+    if not products:
+        return products
+
+    product_ids = sorted({int(product["id"]) for product in products if product.get("id") is not None})
+    if not product_ids:
+        return products
+
+    with connect(db_path) as conn:
+        city_rows = conn.execute("SELECT DISTINCT city FROM stock ORDER BY city").fetchall()
+        cities = [str(row["city"]) for row in city_rows]
+
+        placeholders = ",".join("?" for _ in product_ids)
+        rows = conn.execute(
+            f"""
+            SELECT product_id, city, quantity, status
+            FROM stock
+            WHERE product_id IN ({placeholders})
+            ORDER BY city
+            """,
+            product_ids,
+        ).fetchall()
+
+    stock_by_product: dict[int, dict[str, dict[str, Any]]] = {
+        product_id: {
+            city: {"quantity": 0, "status": "out_of_stock"}
+            for city in cities
+        }
+        for product_id in product_ids
+    }
+    for row in rows:
+        stock_by_product[int(row["product_id"])][str(row["city"])] = {
+            "quantity": row["quantity"],
+            "status": row["status"],
+        }
+
+    seen_product_ids: set[int] = set()
+    unique_products: list[dict[str, Any]] = []
+    for product in products:
+        product_id = int(product["id"])
+        if product_id in seen_product_ids:
+            continue
+        seen_product_ids.add(product_id)
+        product["stock_by_city"] = stock_by_product.get(product_id, {})
+        unique_products.append(product)
+    return unique_products
 
 
 def count_products(db_path: Path = CATALOG_DB_PATH) -> int:

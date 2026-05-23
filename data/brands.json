@@ -1,0 +1,48 @@
+[
+  {
+    "id": "about-centr-krasok-brand-list",
+    "title": "Бренды Центр Красок #1",
+    "text": "В Центр Красок #1 представлены бренды: Argile, Anza, Color Expert, Charmant, Dulux, dufa, Hammerite, HYGGE, Kelly-Moore, KUDO, Levis, Little Greene, Luxium, Milq, Marshall, Masterline, MASTER color, MAKO, Orac Decor, Oikos, Pinotex, PPL (Paint & Paper Library), Profilux, PUFAS, Profi Tec, Sikkens, STORCH, Sikkens Heritage, Swiss Lake, TimberCare, TEKNOS, Tytan, Vetonit, Wagner.",
+    "metadata": {
+      "type": "about",
+      "category": "brands",
+      "store_name": "Центр Красок #1",
+      "brands": [
+        "Argile",
+        "Anza",
+        "Color Expert",
+        "Charmant",
+        "Dulux",
+        "dufa",
+        "Hammerite",
+        "HYGGE",
+        "Kelly-Moore",
+        "KUDO",
+        "Levis",
+        "Little Greene",
+        "Luxium",
+        "Milq",
+        "Marshall",
+        "Masterline",
+        "MASTER color",
+        "MAKO",
+        "Orac Decor",
+        "Oikos",
+        "Pinotex",
+        "PPL (Paint & Paper Library)",
+        "Profilux",
+        "PUFAS",
+        "Profi Tec",
+        "Sikkens",
+        "STORCH",
+        "Sikkens Heritage",
+        "Swiss Lake",
+        "TimberCare",
+        "TEKNOS",
+        "Tytan",
+        "Vetonit",
+        "Wagner"
+      ]
+    }
+  }
+]

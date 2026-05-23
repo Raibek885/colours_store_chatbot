@@ -9,9 +9,11 @@ from qdrant_client.models import PointStruct
 
 
 DATA_DIR = Path(__file__).resolve().parent / "data"
-EXPECTED_TOTAL = 28
+EXPECTED_TOTAL = 36
 QDRANT_COLLECTION = "colour_store"
 UUID_NAMESPACE = uuid.UUID("2ab2a5ef-e395-4a59-8c92-1e3107d0e7c4")
+TECHNOLOGY_URL = "https://centr-krasok.kz/articles/sovremennye_tekhnologii_v_proizvodstve_krasok/"
+TECHNOLOGY_PAGE_TITLE = "Современные технологии в производстве красок"
 
 
 def load_json_items(filename):
@@ -80,6 +82,27 @@ def build_glossary():
     return records
 
 
+def build_technologies():
+    filename = "technology.py"
+    records = []
+    for index, (term, definition) in enumerate(load_python_variable(filename, "technologies_data"), start=1):
+        source_id = f"centr_krasok_tech_{index:03d}"
+        text = f"{term}. {definition}"
+        payload = {
+            "type": "technology",
+            "category": "technologies",
+            "term": term,
+            "text": text,
+            "source": "centr-krasok.kz",
+            "url": TECHNOLOGY_URL,
+            "page_title": TECHNOLOGY_PAGE_TITLE,
+            "language": "ru",
+            "company": "Центр Красок #1",
+        }
+        records.append(make_record(filename, source_id, text, payload))
+    return records
+
+
 def build_terms_conditions():
     filename = "TermsConditions.py"
     records = []
@@ -109,10 +132,12 @@ def build_records():
     records = []
     records.extend(build_contacts())
     records.extend(build_glossary())
+    records.extend(build_technologies())
     records.extend(build_terms_conditions())
     records.extend(build_title_text_file("details.json"))
     records.extend(build_title_text_file("delivery.json"))
     records.extend(build_title_text_file("general.json"))
+    records.extend(build_title_text_file("brands.json"))
     return records
 
 
@@ -124,10 +149,12 @@ def print_dry_run(records):
     for filename in [
         "contacts.json",
         "glossary.py",
+        "technology.py",
         "TermsConditions.py",
         "details.json",
         "delivery.json",
         "general.json",
+        "brands.json",
     ]:
         print(f"{filename}: {counts[filename]}")
 
@@ -135,7 +162,7 @@ def print_dry_run(records):
     print(f"matches expected: {len(records) == EXPECTED_TOTAL}")
     print()
 
-    sample_files = ["contacts.json", "glossary.py", "TermsConditions.py"]
+    sample_files = ["contacts.json", "glossary.py", "technology.py", "TermsConditions.py", "brands.json"]
     sample_records = []
     for sample_file in sample_files:
         sample_records.append(next(record for record in records if record["file"] == sample_file))
@@ -205,6 +232,8 @@ def verify_records():
         "можно ли вернуть товар?",
         "в воскресенье доставляете?",
         "сколько цветов колеровки?",
+        "что такое компьютерная колеровка?",
+        "какие бренды у вас представлены?",
     ]
     print("SEMANTIC SEARCH")
     for query in queries:
